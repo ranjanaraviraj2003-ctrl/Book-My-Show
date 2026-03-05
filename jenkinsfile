@@ -77,7 +77,7 @@ pipeline {
             emailext attachLog: true,
             subject: "Build Status: ${currentBuild.result}",
             body: "Project: ${env.JOB_NAME}\nBuild Number: ${env.BUILD_NUMBER}\nBuild URL: ${env.BUILD_URL}",
-            to: "your-email@gmail.com"
+            to: "ranjanaraviraj2003@gmail.com"
         }
     }
 }
