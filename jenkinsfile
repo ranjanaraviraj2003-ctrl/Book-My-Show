@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+
+    tools {
+        jdk 'jdk17'
+    }
+
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+        DOCKER_IMAGE = 'ranjana10703/book-my-show:latest'
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Code from GitHub') {
+            steps {
+                git branch: 'ranjana-feature', url: 'https://github.com/ranjanaraviraj2003-ctrl/Book-My-Show.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh '''
+                    export SONAR_SCANNER_OPTS="-Xmx1024m"
+                    $SCANNER_HOME/bin/sonar-scanner \
+                    -Dsonar.projectName=BookMyShow \
+                    -Dsonar.projectKey=BookMyShow
+                    '''
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('bookmyshow-app') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+    steps {
+        script {
+            withDockerRegistry([credentialsId: 'dockerhub-cred']) {
+                dir('bookmyshow-app') {
+                    sh '''
+                    docker build -t ranjana10703/book-my-show .
+                    docker push ranjana10703/book-my-show
+                    '''
+                }
+            }
+        }
+    }
+}
+
+        stage('Deploy Container') {
+            steps {
+                sh '''
+                docker stop bookmyshow || true
+                docker rm bookmyshow || true
+
+                docker run -d -p 3000:3000 --name bookmyshow ranjana10703/book-my-show
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            emailext attachLog: true,
+            subject: "Build Status: ${currentBuild.result}",
+            body: "Project: ${env.JOB_NAME}\nBuild Number: ${env.BUILD_NUMBER}\nBuild URL: ${env.BUILD_URL}",
+            to: "your-email@gmail.com"
+        }
+    }
+}
