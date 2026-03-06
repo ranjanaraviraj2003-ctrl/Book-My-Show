@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     tools {
-        jdk 'jdk17'
+        nodejs 'nodejs'
     }
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKER_IMAGE = 'ranjana10703/book-my-show:latest'
+        DOCKER_IMAGE = 'ranjana10703/book-my-show'
     }
 
     stages {
@@ -18,16 +18,9 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('Checkout Code') {
             steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh '''
-                    export SONAR_SCANNER_OPTS="-Xmx1024m"
-                    $SCANNER_HOME/bin/sonar-scanner \
-                    -Dsonar.projectName=BookMyShow \
-                    -Dsonar.projectKey=BookMyShow
-                    '''
-                }
+                git branch: 'ranjana-feature', url: 'https://github.com/ranjanaraviraj2003-ctrl/Book-My-Show.git'
             }
         }
 
@@ -39,27 +32,42 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('SonarQube Analysis') {
             steps {
-                script {
-                    withDockerRegistry([credentialsId: 'dockerhub-cred']) {
-                        dir('bookmyshow-app') {
-                            sh '''
-                            docker build -t ranjana10703/book-my-show .
-                            docker push ranjana10703/book-my-show
-                            '''
-                        }
+                dir('bookmyshow-app') {
+                    withSonarQubeEnv('sonar-server') {
+                        sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=BookMyShow \
+                        -Dsonar.projectName=BookMyShow \
+                        -Dsonar.sources=.
+                        '''
                     }
                 }
             }
         }
 
-        stage('Deploy Container') {
+        stage('Build Docker Image') {
+            steps {
+                dir('bookmyshow-app') {
+                    sh 'docker build -t ranjana10703/book-my-show .'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-cred']) {
+                    sh 'docker push ranjana10703/book-my-show'
+                }
+            }
+        }
+
+        stage('Run Docker Container') {
             steps {
                 sh '''
                 docker stop bookmyshow || true
                 docker rm bookmyshow || true
-
                 docker run -d -p 3000:3000 --name bookmyshow ranjana10703/book-my-show
                 '''
             }
@@ -67,11 +75,41 @@ pipeline {
     }
 
     post {
+
+        success {
+            emailext(
+                subject: "Jenkins Build SUCCESS",
+                body: """
+Pipeline executed successfully.
+
+Project: BookMyShow
+Build Number: ${env.BUILD_NUMBER}
+Job: ${env.JOB_NAME}
+
+Application deployed successfully.
+""",
+                to: "ranjanaraviraj2003@gmail.com"
+            )
+        }
+
+        failure {
+            emailext(
+                subject: "Jenkins Build FAILED",
+                body: """
+Pipeline execution FAILED.
+
+Project: BookMyShow
+Build Number: ${env.BUILD_NUMBER}
+Job: ${env.JOB_NAME}
+
+Check Jenkins console logs.
+""",
+                to: "ranjanaraviraj2003@gmail.com"
+            )
+        }
+
         always {
-            emailext attachLog: true,
-            subject: "Build Status: ${currentBuild.result}",
-            body: "Project: ${env.JOB_NAME}\nBuild Number: ${env.BUILD_NUMBER}\nBuild URL: ${env.BUILD_URL}",
-            to: "ranjanaraviraj2003@gmail.com"
+            echo "Pipeline finished."
         }
     }
 }
