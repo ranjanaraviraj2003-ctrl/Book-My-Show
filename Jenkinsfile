@@ -57,7 +57,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                withDockerRegistry([credentialsId: 'dockerhub-cred']) {
+                withDockerRegistry([credentialsId: 'dockerhub-cred', url: 'https://index.docker.io/v1/']) {
                     sh 'docker push ranjana10703/book-my-show'
                 }
             }
