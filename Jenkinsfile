@@ -51,18 +51,20 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir('bookmyshow-app') {
-                    sh 'docker build -t $DOCKER_IMAGE .'
+                    sh 'docker build -t ranjana10703/bms-app:latest .'
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withDockerRegistry([url: 'https://index.docker.io/v1/', credentialsId: 'dockerhub-cred']) {
-                    sh 'docker push $DOCKER_IMAGE'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
+                        sh 'docker push ranjana10703/bms-app:latest'
+                    }
                 }
-            }
-        }
+            }   
+        } 
 
         stage('Run Docker Container') {
             steps {
