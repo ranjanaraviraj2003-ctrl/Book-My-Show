@@ -5,14 +5,12 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                dir('bookmyshow-app') {
-                    sh '''
-                    kubectl apply -f deployment.yaml
-                    kubectl apply -f service.yaml
-                    kubectl get pods
-                    kubectl get svc
-                    '''
-                }
+                sh '''
+                kubectl apply -f deployment.yml
+                kubectl apply -f service.yml
+                kubectl get pods
+                kubectl get svc
+                '''
             }
         }
 
