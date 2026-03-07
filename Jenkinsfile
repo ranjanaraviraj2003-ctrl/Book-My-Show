@@ -48,7 +48,7 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
+        stage('Build Docker Image') {
             steps {
                 sh 'docker build -t $DOCKER_IMAGE .'
             }
@@ -71,27 +71,45 @@ pipeline {
                 '''
             }
         }
+
     }
 
     post {
-        always {
-            echo 'Pipeline finished.'
-        }
 
         success {
             emailext(
-                subject: "SUCCESS: Jenkins Pipeline",
-                body: "BookMyShow pipeline executed successfully.",
+                subject: "Jenkins Build SUCCESS",
+                body: """
+Pipeline executed successfully.
+
+Project: BookMyShow
+Build Number: ${env.BUILD_NUMBER}
+Job: ${env.JOB_NAME}
+
+Application deployed successfully.
+""",
                 to: "ranjanaraviraj2003@gmail.com"
             )
         }
 
         failure {
             emailext(
-                subject: "FAILED: Jenkins Pipeline",
-                body: "BookMyShow pipeline failed. Please check Jenkins logs.",
+                subject: "Jenkins Build FAILED",
+                body: """
+Pipeline execution FAILED.
+
+Project: BookMyShow
+Build Number: ${env.BUILD_NUMBER}
+Job: ${env.JOB_NAME}
+
+Check Jenkins console logs.
+""",
                 to: "ranjanaraviraj2003@gmail.com"
             )
+        }
+
+        always {
+            echo "Pipeline finished."
         }
     }
 }
